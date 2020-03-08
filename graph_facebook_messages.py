@@ -12,6 +12,7 @@ window_smoothing_width_days = 32 # stdev of gaussian to convolve over the data
 start_date = date(2007, 1, 1) # Starting date to graph from
 end_date = date.today()
 num_top_people = 20 # How many of the top people to display
+enable_group_chats = False
 
 # for word count
 def get_message_weight(msg):
@@ -51,6 +52,8 @@ def process_conversation(convo):
     if user_name in participants:
         participants.remove(user_name)
     if len(participants) == 0:
+        return []
+    if len(participants) != 1 and not enable_group_chats:
         return []
 
     messages = convo['messages']
