@@ -6,5 +6,5 @@ First, go [here](https://www.facebook.com/settings?tab=your_facebook_information
 Then, clone this repo and run:
 ```
 pip install -r requirements.txt
-python graph_facebook_messages.py <directory with messages>
+python graph_facebook_messages.py <directory with messages> <Facebookfirstname Facebooklastname> <start date as YYYY-MM-DD>
 ```

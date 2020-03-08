@@ -6,10 +6,8 @@ import sys
 import math
 from datetime import *
 
-user_name = 'Asya Bergal'
 window_size_days = 512 # Window size to average # of messages over
 window_smoothing_width_days = 32 # stdev of gaussian to convolve over the data
-start_date = date(2007, 1, 1) # Starting date to graph from
 end_date = date.today()
 num_top_people = 20 # How many of the top people to display
 enable_group_chats = False
@@ -47,7 +45,7 @@ def spread_list(items, k):
     return res
 
 # returns a list of (timestamp, participants, weight) tuples, where participants equally share message weight
-def process_conversation(convo):
+def process_conversation(convo, user_name):
     participants = set([p['name'] for p in convo['participants']])
     if user_name in participants:
         participants.remove(user_name)
@@ -70,7 +68,7 @@ def process_conversation(convo):
 
     return [(msg['timestamp_ms'] / 1000.0, get_local_participants(msg), get_message_weight(msg)) for msg in messages]
 
-def graph_messages_window(all_messages):
+def graph_messages_window(all_messages, start_date):
 
     delta = end_date - start_date
 
@@ -124,14 +122,14 @@ def graph_messages_window(all_messages):
 
     plt.rc('xtick', labelsize=22)
     plt.rc('ytick', labelsize=22)
-    plt.rc('legend', fontsize=8)
+    plt.rc('legend', fontsize=16)
     plt.rc('axes', titlesize=26)
     plt.title("Facebook messages by person")
     plt.stackplot(xs, *ys, other_ys, colors=colors, labels=labels)
     plt.legend(loc='upper left')
     plt.show()
 
-def process_conversations(data_directory):
+def process_conversations(data_directory, user_name, start_date):
     inbox = os.path.join(data_directory, 'messages', 'inbox')
     # all_messages: list of (time_seconds, creditors)
     all_messages = []
@@ -140,7 +138,7 @@ def process_conversations(data_directory):
             if msg_file.endswith(".json"):
                 with open(msg_file) as f:
                     convo = json.load(f)
-                    all_messages.extend(process_conversation(convo))
+                    all_messages.extend(process_conversation(convo, user_name))
 
     all_people = set.union(*[ps for _, ps, _ in all_messages])
 
@@ -158,11 +156,14 @@ def process_conversations(data_directory):
 
         messages_by_day_by_person[person] = messages_per_day
 
-    graph_messages_window(messages_by_day_by_person)
+    graph_messages_window(messages_by_day_by_person, start_date)
 
 def main():
     data_directory = sys.argv[1]
-    process_conversations(data_directory)
+    user_name = sys.argv[2]
+    start_date_str = sys.argv[3]
+    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    process_conversations(data_directory, user_name, start_date)
 
 if __name__ == "__main__":
     main()
