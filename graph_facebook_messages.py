@@ -62,7 +62,8 @@ def graph_messages_window(all_messages):
 
             total_messages += message_counts[day]
 
-        ys_and_labels.append((total_messages, y_name, name))
+        name_with_message_count = name + " (" + str(total_messages) + ")"
+        ys_and_labels.append((total_messages, y_name, name_with_message_count))
 
     # Display label sorted by most messages
     ys_and_labels.sort(reverse=True)
@@ -70,17 +71,22 @@ def graph_messages_window(all_messages):
     # Sort y-values into a set of y-values for each of the top n people and "Other"
     ys = [y_and_label[1] for y_and_label in ys_and_labels[:n]]
     other_ys = [0] * len(xs)
-    for y in ys[n:]:
+    total_other_messages = 0
+    for y_and_label in ys_and_labels[n:]:
+        y = y_and_label[1]
         for i, count in enumerate(y):
             other_ys[i] += count
+        total_other_messages += y_and_label[0]
 
     labels = [y_and_label[2] for y_and_label in ys_and_labels[:n]]
-    labels.append("Other")
+    labels.append("Other (" + str(total_other_messages) + ")")
 
     # Make colors prettier
-    pal = sns.color_palette("hls", n + 1)
-    # This is really hardcoded for 21 basically
+    pal = sns.color_palette("hls", n)
+    # This is really hardcoded for 20 basically
     colors = pal[1::2] + pal[::2]
+    other_color = (0.9, 0.9, 0.9) #Grey
+    colors.append(other_color)
 
     plt.rc('xtick', labelsize=22)
     plt.rc('ytick', labelsize=22)
