@@ -85,6 +85,8 @@ def graph_messages_window(all_messages):
     plt.rc('xtick', labelsize=22)
     plt.rc('ytick', labelsize=22)
     plt.rc('legend', fontsize=16)
+    plt.rc('axes', titlesize=26)
+    plt.title("Facebook messages per person")
     plt.stackplot(xs, *ys, other_ys, colors=colors, labels=labels)
     plt.legend(loc='upper left')
     plt.show()
