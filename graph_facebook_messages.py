@@ -1,9 +1,35 @@
-from datetime import date, datetime, timedelta
 import json
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
+import math
+from datetime import *
+
+window_size_days = 2048 # Window size to average # of messages over
+start_date = date(2007, 1, 1) # Starting date to graph from
+end_date = date.today()
+num_top_people = 20 # How many of the top people to display
+
+# how much to weigh a message based on distance
+def get_weight(message_day, graph_day):
+    stdev = 32
+    return gaussian_pdf(message_day, stdev, graph_day)
+
+# average over window
+# def get_weight(message_day, graph_day):
+#     return 1.0 / window_size_days
+
+def gaussian_pdf(mean, stdev, x):
+    variance = stdev ** 2
+    offset = abs(mean - x)
+    return math.exp(-(offset ** 2)/(2 * variance)) / math.sqrt(2 * math.pi * variance)
+
+def spread_list(items, k):
+    res = []
+    for i in range(0, k):
+        res = res + items[i::k]
+    return res
 
 # Returns dictionary from date to number of messages
 def messages_per_day(messages):
@@ -36,11 +62,8 @@ def process_two_person_conversation(conversation_folder):
     return (their_name, messages_per_day(messages))
 
 def graph_messages_window(all_messages):
-    window_size_days = 31 # Window size to average # of messages over
-    start_date = date(2012, 1, 1) # Starting date to graph from
-    n = 20 # How many of the top people to display?
 
-    delta = date.today() - start_date
+    delta = end_date - start_date
 
     xs = [start_date + timedelta(days=i) for i in range(delta.days)]
 
@@ -55,10 +78,12 @@ def graph_messages_window(all_messages):
 
         for day in message_counts:
             message_delta = day - start_date
-            # Add the current day to the rolling average over the window size
             for windowed_day in range(message_delta.days - int(window_size_days / 2),
                                       message_delta.days + int(window_size_days / 2) + 1):
-                y_name[windowed_day] += message_counts[day] / window_size_days
+                if windowed_day > 0 and windowed_day < len(y_name):
+                    weight = get_weight(message_delta.days, windowed_day)
+                    inc = message_counts[day] * weight
+                    y_name[windowed_day] += inc
 
             total_messages += message_counts[day]
 
@@ -69,30 +94,30 @@ def graph_messages_window(all_messages):
     ys_and_labels.sort(reverse=True)
 
     # Sort y-values into a set of y-values for each of the top n people and "Other"
-    ys = [y_and_label[1] for y_and_label in ys_and_labels[:n]]
+    ys = [y_and_label[1] for y_and_label in ys_and_labels[:num_top_people]]
     other_ys = [0] * len(xs)
     total_other_messages = 0
-    for y_and_label in ys_and_labels[n:]:
+    for y_and_label in ys_and_labels[num_top_people:]:
         y = y_and_label[1]
         for i, count in enumerate(y):
             other_ys[i] += count
         total_other_messages += y_and_label[0]
 
-    labels = [y_and_label[2] for y_and_label in ys_and_labels[:n]]
+    labels = [y_and_label[2] for y_and_label in ys_and_labels[:num_top_people]]
     labels.append("Other (" + str(total_other_messages) + ")")
 
     # Make colors prettier
-    pal = sns.color_palette("hls", n)
+    pal = sns.color_palette("hls", num_top_people)
     # This is really hardcoded for 20 basically
-    colors = pal[1::2] + pal[::2]
+    colors = spread_list(pal, 4)
     other_color = (0.9, 0.9, 0.9) #Grey
     colors.append(other_color)
 
     plt.rc('xtick', labelsize=22)
     plt.rc('ytick', labelsize=22)
-    plt.rc('legend', fontsize=16)
+    plt.rc('legend', fontsize=8)
     plt.rc('axes', titlesize=26)
-    plt.title("Facebook messages per person")
+    plt.title("Facebook messages by person")
     plt.stackplot(xs, *ys, other_ys, colors=colors, labels=labels)
     plt.legend(loc='upper left')
     plt.show()
