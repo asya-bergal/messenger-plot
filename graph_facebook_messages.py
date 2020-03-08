@@ -10,8 +10,8 @@ window_size_days = 512 # Window size to average # of messages over
 window_smoothing_width_days = 32 # stdev of gaussian to convolve over the data
 end_date = date.today()
 num_top_people = 20 # How many of the top people to display
-enable_group_chats = True
-anonymize = True
+enable_group_chats = False
+anonymize = False
 
 # for word count
 def get_message_weight(msg):
@@ -45,9 +45,10 @@ def spread_list(items, k):
         res = res + items[i::k]
     return res
 
-anon_names = []
-with open('anon_names.txt') as f:
-    anon_names = [name.strip() for name in f.readlines()]
+if anonymize:
+    anon_names = []
+    with open('anon_names.txt') as f:
+        anon_names = [name.strip() for name in f.readlines()]
 
 # returns a list of (timestamp, participants, weight) tuples, where participants equally share message weight
 def process_conversation(convo, user_name):
