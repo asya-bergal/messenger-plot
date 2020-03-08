@@ -11,6 +11,7 @@ window_smoothing_width_days = 32 # stdev of gaussian to convolve over the data
 end_date = date.today()
 num_top_people = 20 # How many of the top people to display
 enable_group_chats = False
+anonymize = False
 
 # for word count
 def get_message_weight(msg):
@@ -43,6 +44,11 @@ def spread_list(items, k):
     for i in range(0, k):
         res = res + items[i::k]
     return res
+
+if anonymize:
+    anon_names = []
+    with open('anon_names.txt') as f:
+        anon_names = [name.strip() for name in f.readlines()]
 
 # returns a list of (timestamp, participants, weight) tuples, where participants equally share message weight
 def process_conversation(convo, user_name):
@@ -94,8 +100,7 @@ def graph_messages_window(all_messages, start_date):
 
             total_messages += message_counts[day]
 
-        name_with_message_count = name + " (" + str(int(total_messages)) + ")"
-        ys_and_labels.append((total_messages, y_name, name_with_message_count))
+        ys_and_labels.append((total_messages, y_name, name, total_messages))
 
     # Display label sorted by most messages
     ys_and_labels.sort(reverse=True)
@@ -110,8 +115,14 @@ def graph_messages_window(all_messages, start_date):
             other_ys[i] += count
         total_other_messages += y_and_label[0]
 
-    labels = [y_and_label[2] for y_and_label in ys_and_labels[:num_top_people]]
-    labels.append("Other (" + str(int(total_other_messages)) + ")")
+    top_ys_and_labels = ys_and_labels[:num_top_people]
+
+    anon_mapping = { name: name for _, _, name, _ in top_ys_and_labels }
+    if anonymize:
+        anon_mapping = { name: anon_names[i] for i, (_, _, name, _) in enumerate(top_ys_and_labels) }
+
+    labels = ["%s (%d)" % (anon_mapping[y_and_label[2]], int(y_and_label[3])) for y_and_label in top_ys_and_labels]
+    labels.append("Other (%d)" % int(total_other_messages))
 
     # Make colors prettier
     pal = sns.color_palette("hls", num_top_people)
