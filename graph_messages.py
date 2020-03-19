@@ -1,3 +1,5 @@
+import csv
+import re
 import json
 import os
 import matplotlib.pyplot as plt
@@ -344,6 +346,43 @@ def get_all_gtalk_messages(
 
     return all_messages
 
+def get_all_iphone_messages(
+        data_directory,
+        user_name,
+        start_date):
+    contact_mapping = {}
+    with open(os.path.join(data_directory, 'contacts.csv')) as csvfile:
+        contacts_reader = csv.reader(csvfile)
+        for row in contacts_reader:
+            normalized_number = re.sub('[- ()]', '', row[0])
+            full_name = (row[1] + ' ' + row[2]).strip()
+            # contact_mapping[normalized_number] = full_name
+            if len(normalized_number) == 10 and normalized_number.isnumeric():
+                contact_mapping['+1' + normalized_number] = full_name
+            elif len(normalized_number) == 11 and normalized_number.isnumeric() and normalized_number.startswith('1'):
+                contact_mapping['+' + normalized_number] = full_name
+            elif len(normalized_number) == 12 and normalized_number[1:].isnumeric() and normalized_number.startswith('+1'):
+                contact_mapping[normalized_number] = full_name
+            elif '@' in normalized_number:
+                contact_mapping[normalized_number] = full_name
+            else:
+                print(normalized_number)
+                contact_mapping[normalized_number] = full_name
+
+    def get_name(contact):
+        return contact_mapping.get(contact) or contact
+
+    all_messages = []
+    with open(os.path.join(data_directory, 'messages.csv')) as csvfile:
+        messages_reader = csv.reader(csvfile)
+        for row in messages_reader:
+            dt = date.fromisoformat(row[0][:row[0].find(' ')])
+            interlocutor = normalize_name(get_name(row[1]))
+            weight = get_message_weight(row[2])
+            all_messages.append((dt, set([interlocutor]), weight))
+
+    return all_messages
+
 def main():
     start_date_str = sys.argv[1]
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
@@ -362,6 +401,8 @@ def main():
             all_messages = get_all_hangouts_messages(data_dir, user_name, start_date)
         elif format_spec == 'gtalk':
             all_messages = get_all_gtalk_messages(data_dir, user_name, start_date)
+        elif format_spec == 'iphone':
+            all_messages = get_all_iphone_messages(data_dir, user_name, start_date)
         aggregate_messages(messages_by_day_by_person, all_messages)
 
     graph_messages_window(messages_by_day_by_person, start_date, end_date)
