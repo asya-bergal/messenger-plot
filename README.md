@@ -23,6 +23,8 @@ Currently three message input sources are supported:
   single directory as XML files. I can't guarantee this is up-to-date with the latest export format.
 * `hangouts`: Google Hangouts message history, downloaded from
   [Google Takeout](https://takeout.google.com/). The `Takeout` directory should be provided.
+* `gtalk`: Google Talk chat logs from before the days of Hangouts. These must be downloaded through
+  IMAP. We assume the format produced by the script [here](https://github.com/coandco/gtalk_export).
 
 Messages from all provided sources are aggregated together into a single plot.
 

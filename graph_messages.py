@@ -8,9 +8,9 @@ from datetime import *
 
 window_smoothing_width_days = 50 # stdev of gaussian to convolve over the data
 window_size_days = 8 * window_smoothing_width_days # Window size to average # of messages over
-num_top_people = 15 # How many of the top people to display
+num_top_people = 30 # How many of the top people to display
 color_spread_skip = num_top_people // 5 # stride over color
-enable_group_chats = True
+enable_group_chats = False
 anonymize = False
 
 # for word count
@@ -284,6 +284,66 @@ def get_all_hangouts_messages(
 
     return all_messages
 
+# returns a list of (timestamp, participants, weight) tuples, where participants equally share message weight
+def process_gtalk_conversation(convo, user_name):
+    def get_date(line):
+        try:
+            return date.fromisoformat(line[:line.find(' ')])
+        except ValueError:
+            return None
+    def get_sender(line):
+        return line[line.find('<') + 1 : line.find('>')]
+    def get_message(line):
+        return line[line.find('>') + 2:]
+
+    participants = set([normalize_name(get_sender(m)) for m in convo if get_date(m) is not None])
+    if user_name in participants:
+        participants.remove(user_name)
+    if len(participants) == 0:
+        return []
+    if len(participants) != 1 and not enable_group_chats:
+        return []
+
+    def get_local_participants(sender):
+        sender = normalize_name(sender)
+        if sender == user_name:
+            return participants
+        else:
+            return set([sender])
+
+    messages = []
+    last_message = None
+    for line in convo:
+        dt = get_date(line)
+        if dt is not None:
+            if last_message is not None:
+                last_message[2] = get_message_weight(last_message[2])
+                messages.append(last_message)
+            last_message = [
+                dt,
+                get_local_participants(get_sender(line)),
+                get_message(line)
+            ]
+        else:
+            assert last_message is not None
+            last_message[2] += '\n' + line
+    if last_message is not None:
+        last_message[2] = get_message_weight(last_message[2])
+        messages.append(last_message)
+    return messages
+
+def get_all_gtalk_messages(
+        data_directory,
+        user_name,
+        start_date):
+    all_messages = []
+    for msg_file in [os.path.join(data_directory, c) for c in os.listdir(data_directory)]:
+        with open(msg_file) as f:
+            convo = [l for l in f.readlines()]
+            all_messages.extend(process_gtalk_conversation(convo, user_name))
+
+    return all_messages
+
 def main():
     start_date_str = sys.argv[1]
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
@@ -300,6 +360,8 @@ def main():
             all_messages = get_all_adium_messages(data_dir, user_name, start_date)
         elif format_spec == 'hangouts':
             all_messages = get_all_hangouts_messages(data_dir, user_name, start_date)
+        elif format_spec == 'gtalk':
+            all_messages = get_all_gtalk_messages(data_dir, user_name, start_date)
         aggregate_messages(messages_by_day_by_person, all_messages)
 
     graph_messages_window(messages_by_day_by_person, start_date, end_date)
